@@ -1,5 +1,5 @@
 pandas==2.2.3
-matplotlib==3.9.2
+matplotlib==3.9.4
 seaborn==0.13.2
-streamlit==1.39.0
-Babel==2.16.0
+streamlit==1.43.0
+Babel==2.17.0
