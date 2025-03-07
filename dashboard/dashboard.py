@@ -347,4 +347,4 @@ with st.container():
           "Pelanggan 1617b1357756262bfa56ab541c47bc16 merupakan pelanggan dengan total pengeluaran tertinggi, yaitu sejumlah 109.312 ribu.")
 
 
-st.caption('Copyright (C) Lukas Krisna 2025')
+st.caption('Copyright © Lukas Krisna 2025')
