@@ -111,7 +111,7 @@ with st.sidebar:
 
     st.title("Brazil E-Commerce")
 
-    st.image("dashboard/pngegg.png")
+    st.image("dashboard/logo.svg")
 
     start_date, end_date = st.date_input(
         label="Date Range",
