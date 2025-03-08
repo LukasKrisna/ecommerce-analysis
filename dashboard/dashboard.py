@@ -1,12 +1,8 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from babel.numbers import format_currency
-
-
-sns.set_theme(style='dark')
-
 
 def create_daily_orders_df(df):
     daily_orders_df = df.resample(rule='D', on='order_approved_at').agg({
@@ -107,10 +103,50 @@ for col in datetime_columns:
 min_date = all_df["order_approved_at"].min()
 max_date = all_df["order_approved_at"].max()
 
+st.set_page_config(
+    page_title="Brazil E-Commerce Dashboard",
+    page_icon="🛒",
+    layout="wide"
+)
+
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem !important;
+        color: #1E88E5;
+    }
+    .sub-header {
+        font-size: 1.8rem !important;
+        color: #1976D2;
+    }
+    .metric-card {
+        background-color: #f0f8ff;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    }
+    .metric-label {
+        font-size: 1rem !important;
+        color: #333333;
+        font-weight: normal;
+    }
+    .metric-value {
+        font-size: 1.5rem !important;
+        font-weight: bold;
+        color: #1E88E5;
+    }
+    .expander-text {
+        color: #ffffff;
+        font-size: 1rem !important;
+    }
+    p {
+        color: #ffffff;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 with st.sidebar:
-
-    st.title("Brazil E-Commerce")
-
+    st.markdown('<h1 class="main-header">Brazil E-Commerce</h1>', unsafe_allow_html=True)
     st.image("dashboard/logo.svg")
 
     start_date, end_date = st.date_input(
@@ -132,219 +168,341 @@ city, most_common_city = create_bycity_df(main_df)
 order_status, common_status = create_order_status(main_df)
 top_recency, top_frequency, top_monetary = create_rm_df(main_df)
 
-
-st.subheader("E-commerce Income")
+st.markdown('<h2 class="sub-header">E-commerce Income</h2>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 with col1:
     total_spend = format_currency(sum_spend_df["total_spend"].sum(), "BRL", locale="pt_BR")
-    st.markdown(f"Total Income: **{total_spend}**")
+    st.markdown(f"""
+    <div class="metric-card">
+        <p class="metric-label">Total Income</p>
+        <p class="metric-value">{total_spend}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col2:
     avg_spend = format_currency(sum_spend_df["total_spend"].mean(), "BRL", locale="pt_BR")
-    st.markdown(f"Average Income: **{avg_spend}**")
+    st.markdown(f"""
+    <div class="metric-card">
+        <p class="metric-label">Average Daily Income</p>
+        <p class="metric-value">{avg_spend}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-fig, ax = plt.subplots(figsize=(12, 6))
-ax.plot(
-    sum_spend_df["order_approved_at"],
-    sum_spend_df["total_spend"],
-    linewidth=1,
-    color="#72BCD4"
+fig_income = px.line(
+    sum_spend_df, 
+    x="order_approved_at", 
+    y="total_spend",
+    labels={"order_approved_at": "Date", "total_spend": "Total Income (BRL)"},
+    title="Daily Income Timeline"
 )
-ax.tick_params(axis="x", rotation=15)
-ax.tick_params(axis="y", labelsize=15)
-st.pyplot(fig)
+fig_income.update_traces(line_color='#1E88E5', line_width=2)
+fig_income.update_layout(
+    plot_bgcolor='rgba(0,0,0,0)',
+    paper_bgcolor='rgba(0,0,0,0)',
+    xaxis=dict(showgrid=False),
+    yaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+    margin=dict(l=20, r=20, t=40, b=20),
+    height=400
+)
+st.plotly_chart(fig_income, use_container_width=True)
 
 with st.expander("Bagaimana tren performa penjualan E-commerce dari waktu ke waktu?"):
-    st.write("Performa penjualan E-commerce menunjukkan tren pertumbuhan signifikan dari waktu ke waktu. Pada periode awal (2016 hingga awal 2017), penjualan masih rendah dengan sedikit aktivitas. Memasuki pertengahan 2017, terjadi peningkatan bertahap. Lonjakan besar mulai terlihat pada akhir 2017 hingga awal 2018, kemungkinan dipengaruhi oleh promosi atau event belanja spesial. Menjelang akhir 2018, performa cenderung menurun atau stabil, kemungkinan karena faktor musiman atau penyesuaian pasar.")
+    st.markdown('<p class="expander-text">Performa penjualan E-commerce menunjukkan tren pertumbuhan signifikan dari waktu ke waktu. Pada periode awal (2016 hingga awal 2017), penjualan masih rendah dengan sedikit aktivitas. Memasuki pertengahan 2017, terjadi peningkatan bertahap. Lonjakan besar mulai terlihat pada akhir 2017 hingga awal 2018, kemungkinan dipengaruhi oleh promosi atau event belanja spesial. Menjelang akhir 2018, performa cenderung menurun atau stabil, kemungkinan karena faktor musiman atau penyesuaian pasar.</p>', unsafe_allow_html=True)
 
+st.markdown('<hr>', unsafe_allow_html=True)
+st.markdown('<h2 class="sub-header">Product Sales Chart</h2>', unsafe_allow_html=True)
+col1, col2 = st.columns(2)
 
-with st.container():
-    st.write("---")
-    st.subheader("Product Sales Chart")
-    col1, col2 = st.columns(2)
+with col1:
+    total_items = sum_order_items_df["product_count"].sum()
+    st.markdown(f"""
+    <div class="metric-card">
+        <p class="metric-label">Total Product Sales</p>
+        <p class="metric-value">{total_items:,}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with col1:
-        total_items = sum_order_items_df["product_count"].sum()
-        st.markdown(f"Total Product Sales: **{total_items}**")
+with col2:
+    avg_items = sum_order_items_df["product_count"].mean()
+    st.markdown(f"""
+    <div class="metric-card">
+        <p class="metric-label">Average Item Sales Per Category</p>
+        <p class="metric-value">{avg_items:.2f}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with col2:
-        avg_items = sum_order_items_df["product_count"].mean()
-        st.markdown(f"Average Item Sales: **{avg_items}**")
+col1, col2 = st.columns(2)
 
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(85, 25))
+with col1:
+    top_products = sum_order_items_df.head(5)
+    fig_top = px.bar(
+        top_products,
+        x="product_count",
+        y="product_category_name_english",
+        title="Top 5 Best-Selling Products",
+        orientation='h',
+        color_discrete_sequence=['#1E88E5'] * len(top_products),
+        text="product_count"
+    )
+    fig_top.update_traces(textposition='outside')
+    fig_top.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+        yaxis_title=None,
+        xaxis_title="Number of Sales",
+        margin=dict(l=20, r=20, t=40, b=20),
+        height=400
+    )
+    st.plotly_chart(fig_top, use_container_width=True)
 
-    colors = ["#72BCD4", "#90CCE0", "#ADE0EC", "#ADE0EC", "#ADE0EC"]
+with col2:
+    bottom_products = sum_order_items_df.sort_values(by="product_count", ascending=True).head(5)
+    fig_bottom = px.bar(
+        bottom_products,
+        x="product_count",
+        y="product_category_name_english",
+        title="5 Least-Selling Products",
+        orientation='h',
+        color_discrete_sequence=['#90CAF9'] * len(bottom_products),
+        text="product_count"
+    )
+    fig_bottom.update_traces(textposition='outside')
+    fig_bottom.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+        yaxis_title=None,
+        xaxis_title="Number of Sales",
+        margin=dict(l=20, r=20, t=40, b=20),
+        height=400
+    )
+    st.plotly_chart(fig_bottom, use_container_width=True)
 
-    sns.barplot(x="product_count", y="product_category_name_english", data=sum_order_items_df.head(5), palette=colors,
-                ax=ax[0])
-    ax[0].set_ylabel(None)
-    ax[0].set_xlabel("Number of Sales", fontsize=70)
-    ax[0].set_title("Produk Paling Laris", loc="center", fontsize=100)
-    ax[0].tick_params(axis='y', labelsize=65)
-    ax[0].tick_params(axis='x', labelsize=60)
+with st.expander("Produk mana yang paling banyak dan paling sedikit terjual di E-commerce?"):
+    st.markdown('<p class="expander-text">Produk kategori bed_bath_table yang sangat laris menunjukkan permintaan tinggi yang berkelanjutan, yang bisa dijadikan peluang untuk meningkatkan inventori dan promosi, sedangkan penjualan rendah pada kategori auto dan garden_tools memerlukan pengembangan strategi pemasaran yang lebih kreatif dan penyesuaian produk untuk meningkatkan penjualan.</p>', unsafe_allow_html=True)
 
-    sns.barplot(x="product_count", y="product_category_name_english",
-                data=sum_order_items_df.sort_values(by="product_count", ascending=True).head(5), palette=colors,
-                ax=ax[1])
-    ax[1].set_ylabel(None)
-    ax[1].set_xlabel("Number of Sales", fontsize=70)
-    ax[1].invert_xaxis()
-    ax[1].yaxis.set_label_position("right")
-    ax[1].yaxis.tick_right()
-    ax[1].set_title("Produk Kurang Laris", loc="center", fontsize=100)
-    ax[1].tick_params(axis='y', labelsize=65)
-    ax[1].tick_params(axis='x', labelsize=60)
+st.markdown('<hr>', unsafe_allow_html=True)
+st.markdown('<h2 class="sub-header">Distribution of Customers</h2>', unsafe_allow_html=True)
+tab1, tab2, tab3 = st.tabs(["State", "Top 10 City", "Order Status"])
 
-    st.pyplot(fig)
+with tab1:
+    st.markdown(f"<p>Most Common State: <strong>{most_common_state}</strong></p>", unsafe_allow_html=True)
+    st.markdown("<p>Jumlah pelanggan berdasarkan negara bagian dengan Sao Paulo sebanyak 41.666 pelanggan.</p>", unsafe_allow_html=True)
+    
+    state_sorted = state.sort_values(by='customer_count', ascending=False)
+    fig_state = px.bar(
+        state_sorted,
+        x="customer_count",
+        y="customer_state",
+        title="Customers from Each State",
+        orientation='h',
+        color_discrete_sequence=['#1E88E5'] * len(state_sorted),
+        text="customer_count"
+    )
+    fig_state.update_traces(
+        marker_color=['#1E88E5' if x == most_common_state else '#90CAF9' for x in state_sorted.customer_state],
+        textposition='outside'
+    )
+    fig_state.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+        yaxis_title=None,
+        xaxis_title="Number of Customers",
+        height=600,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_state, use_container_width=True)
 
-    with st.expander("Produk mana yang paling banyak dan paling sedikit terjual di E-commerce?"):
-        st.write("Produk kategori bed_bath_table yang sangat laris menunjukkan permintaan tinggi yang berkelanjutan, yang bisa dijadikan peluang untuk meningkatkan inventori dan promosi, sedangkan penjualan rendah pada kategori auto dan garden_tools memerlukan pengembangan strategi pemasaran yang lebih kreatif dan penyesuaian produk untuk meningkatkan penjualan.")
+with tab2:
+    st.markdown(f"<p>Most Common City: <strong>{most_common_city}</strong></p>", unsafe_allow_html=True)
+    st.markdown("<p>10 besar kota dengan jumlah pelanggan. Kota Sao Paulo menempati urutan 1.</p>", unsafe_allow_html=True)
+    
+    city_sorted = city.sort_values(by='total_customer', ascending=False)
+    top_10_cities = city_sorted.head(10)
+    fig_city = px.bar(
+        top_10_cities,
+        x="total_customer",
+        y="customer_city",
+        title="Top 10 Cities by Customer Count",
+        orientation='h',
+        color_discrete_sequence=['#1E88E5'] * len(top_10_cities),
+        text="total_customer"
+    )
+    fig_city.update_traces(
+        marker_color=['#1E88E5' if x == most_common_city else '#90CAF9' for x in top_10_cities.customer_city],
+        textposition='outside'
+    )
+    fig_city.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+        yaxis_title=None,
+        xaxis_title="Number of Customers",
+        height=400,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_city, use_container_width=True)
 
+with tab3:
+    common_status_ = order_status.index[0] if isinstance(order_status, pd.Series) else ""
+    st.markdown(f"<p>Most Common Order Status: <strong>{common_status_}</strong></p>", unsafe_allow_html=True)
+    st.markdown("<p>Visualisasi ini menunjukkan distribusi status pesanan dalam sistem E-commerce, dengan jumlah pesanan dalam berbagai status. Mayoritas pesanan berada dalam status delivered (115.708).</p>", unsafe_allow_html=True)
+    
+    order_status_df = pd.DataFrame({
+        'status': order_status.index,
+        'count': order_status.values
+    })
+    
+    fig_status = px.bar(
+        order_status_df,
+        x="count",
+        y="status",
+        title="Order Status Distribution",
+        orientation='h',
+        color_discrete_sequence=['#1E88E5'] * len(order_status_df),
+        text="count"
+    )
+    fig_status.update_traces(textposition='outside')
+    fig_status.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+        yaxis_title=None,
+        xaxis_title="Count",
+        height=300,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_status, use_container_width=True)
 
-with st.container():
-    st.write("---")
-    st.subheader("Distribution of Customers")
-    tab1, tab2, tab3 = st.tabs(["State", "Top 10 City", "Order Status"])
+st.markdown('<hr>', unsafe_allow_html=True)
+st.markdown('<h2 class="sub-header">Best Customer Based on RFM Analysis</h2>', unsafe_allow_html=True)
 
-    with tab1:
-        most_common_state = state.customer_state.value_counts().index[0]
-        st.markdown(f"Most Common State: **{most_common_state}**")
-        st.markdown("Jumlah pelanggan berdasarkan negara bagian dengan Sao Paulo sebanyak 41.666 pelanggan.")
+rfm_tab1, rfm_tab2, rfm_tab3 = st.tabs(["Recency", "Frequency", "Monetary"])
 
-        fig, ax = plt.subplots(figsize=(12, 12))
+with rfm_tab1:
+    fig_recency = px.bar(
+        top_recency,
+        x="recency",
+        y="customer_id",
+        title="Top Customers by Recency (Lower is Better)",
+        orientation='h',
+        color_discrete_sequence=['#1E88E5'] * len(top_recency),
+        text="recency"
+    )
+    fig_recency.update_traces(textposition='outside')
+    fig_recency.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+        yaxis_title=None,
+        xaxis_title="Days Since Last Purchase",
+        height=400,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_recency, use_container_width=True)
+    
+    with st.expander("Kapan terakhir seorang pelanggan melakukan transaksi?"):
+        st.markdown('<p class="expander-text">Pelanggan 856336203359aa6a61bf3826f7d84c49 dan a4b417188addbc05b26b72d5e44837a1 merupakan pelanggan yang paling terakhir melakukan transaksi.</p>', unsafe_allow_html=True)
 
-        green_palette = ["#72BCD4" if state == most_common_state else "#B1DEF0" for state in state.customer_state]
+with rfm_tab2:
+    fig_frequency = px.bar(
+        top_frequency,
+        x="frequency",
+        y="customer_id",
+        title="Top Customers by Purchase Frequency",
+        orientation='h',
+        color_discrete_sequence=['#1E88E5'] * len(top_frequency),
+        text="frequency"
+    )
+    fig_frequency.update_traces(textposition='outside')
+    fig_frequency.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+        yaxis_title=None,
+        xaxis_title="Number of Purchases",
+        height=400,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_frequency, use_container_width=True)
+    
+    with st.expander("Seberapa sering seorang pelanggan melakukan transaksi?"):
+        st.markdown('<p class="expander-text">Setelah dianalisis dan divisualisasikan, ternyata setiap pelanggan hanya melakukan pembelian sekali.</p>', unsafe_allow_html=True)
 
-        sns.barplot(y=state.customer_state,
-                    x=state.customer_count.values,
-                    data=state,
-                    palette=green_palette)
+with rfm_tab3:
+    fig_monetary = px.bar(
+        top_monetary,
+        x="monetary",
+        y="customer_id",
+        title="Top Customers by Total Spending",
+        orientation='h',
+        color_discrete_sequence=['#1E88E5'] * len(top_monetary),
+        text=top_monetary["monetary"].apply(lambda x: f"R${x:,.2f}")
+    )
+    fig_monetary.update_traces(textposition='outside')
+    fig_monetary.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(230, 230, 230, 0.6)'),
+        yaxis_title=None,
+        xaxis_title="Total Spend (BRL)",
+        height=400,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    st.plotly_chart(fig_monetary, use_container_width=True)
+    
+    with st.expander("Berapa total pengeluaran tertinggi dari seorang pelanggan?"):
+        st.markdown('<p class="expander-text">Pelanggan 1617b1357756262bfa56ab541c47bc16 merupakan pelanggan dengan total pengeluaran tertinggi, yaitu sejumlah 109.312 ribu.</p>', unsafe_allow_html=True)
 
-        plt.title("Customers from Each State", fontsize=15)
-        plt.xlabel("Number of Customers")
-        plt.ylabel("State")
-        plt.xticks(fontsize=12)
+st.markdown('<hr>', unsafe_allow_html=True)
+st.markdown('<h2 class="sub-header">Review Score Distribution</h2>', unsafe_allow_html=True)
 
-        for i, v in enumerate(state.customer_count.values):
-            ax.text(v + 1, i, str(v), color='black', va='center', ha='left')
+review_df = pd.DataFrame({
+    'score': review_score.index,
+    'count': review_score.values
+})
 
-        x_max = state.customer_count.max() + 3000
-        plt.xlim(0, x_max)
+fig_review = px.bar(
+    review_df,
+    x="score",
+    y="count",
+    title="Distribution of Customer Review Scores",
+    color="score",
+    color_continuous_scale=px.colors.sequential.Blues,
+    text="count"
+)
+fig_review.update_traces(textposition='outside')
+fig_review.update_layout(
+    plot_bgcolor='rgba(0,0,0,0)',
+    paper_bgcolor='rgba(0,0,0,0)',
+    xaxis=dict(
+        title="Review Score",
+        tickmode='linear',
+        dtick=1,
+        showgrid=False
+    ),
+    yaxis=dict(
+        title="Number of Reviews",
+        showgrid=True,
+        gridcolor='rgba(230, 230, 230, 0.6)'
+    ),
+    height=400,
+    margin=dict(l=20, r=20, t=40, b=20),
+    coloraxis_showscale=False
+)
+st.plotly_chart(fig_review, use_container_width=True)
 
-        st.pyplot(fig)
-
-
-    with tab2:
-        st.markdown(f"Most Common City: **{most_common_city}**")
-        st.markdown("10 besar kota dengan jumlah pelanggan. Kota Sao Paulo menempati urutan 1.")
-
-        city_sorted = city.sort_values(by='total_customer', ascending=False)
-        top_10_cities = city_sorted.head(10)
-
-        fig, ax = plt.subplots(figsize=(12, 6))
-
-        green_palette = ["#72BCD4" if city_name == most_common_city else "#B1DEF0" for city_name in
-                         top_10_cities.customer_city]
-
-        sns.barplot(y=top_10_cities.customer_city,
-                    x=top_10_cities.total_customer,
-                    palette=green_palette)
-
-        plt.title("Top 10 Customers from Each City", fontsize=15)
-        plt.xlabel("Number of Customers")
-        plt.ylabel("City")
-        plt.xticks(fontsize=12)
-
-        for i, v in enumerate(top_10_cities.total_customer):
-            ax.text(v + 1, i, str(v), color='black', va='center', ha='left')
-
-        x_max = top_10_cities.total_customer.max() + 1500
-        plt.xlim(0, x_max)
-
-        st.pyplot(fig)
-
-
-    with tab3:
-        common_status_ = order_status.value_counts().index[0]
-        st.markdown(f"Most Common Order Status: **{common_status_}**")
-        st.markdown("Visualisasi ini menunjukkan distribusi status pesanan dalam sistem E-commerce, dengan jumlah pesanan dalam berbagai status. Mayoritas pesanan berada dalam status delivered (115.708).")
-
-        fig, ax = plt.subplots(figsize=(6, 3))
-
-        green_palette = ["#72BCD4" if status == common_status_ else "#72BCD4" for status in order_status.index]
-
-        sns.barplot(y=order_status.index,
-                    x=order_status.values,
-                    order=order_status.index,
-                    palette=green_palette)
-
-        plt.title("Order Status", fontsize=15)
-        plt.xlabel("Count")
-        plt.ylabel("Status")
-        plt.xticks(fontsize=12)
-
-        for i, v in enumerate(order_status.values):
-            ax.text(v + 1, i, str(v), color='black', va='center', ha='left')
-
-        x_max = order_status.max() + 20000
-        plt.xlim(0, x_max)
-
-        st.pyplot(fig)
-
-with st.container():
-  st.write("---")
-
-  st.subheader("Best Customer Based on RFM Analysis")
-
-  fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(32, 6))
-
-  colors = ["#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4"]
-
-  sns.barplot(x="recency", y="customer_id", data=top_recency, palette=colors, ax=ax[0], orient='h')
-  ax[0].set_ylabel(None)
-  ax[0].set_xlabel(None)
-  ax[0].set_title("By Recency (days)", loc="center", fontsize=18)
-  ax[0].tick_params(axis='x', labelsize=15)
-  ax[0].tick_params(axis='y', labelsize=12)
-
-  sns.barplot(x="frequency", y="customer_id", data=top_frequency, palette=colors, ax=ax[1], orient='h')
-  ax[1].set_ylabel(None)
-  ax[1].set_xlabel(None)
-  ax[1].set_title("By Frequency", loc="center", fontsize=18)
-  ax[1].tick_params(axis='x', labelsize=15)
-  ax[1].tick_params(axis='y', labelsize=12)
-
-  sns.barplot(x="monetary", y="customer_id", data=top_monetary, palette=colors, ax=ax[2], orient='h')
-  ax[2].set_ylabel(None)
-  ax[2].set_xlabel(None)
-  ax[2].set_title("By Monetary", loc="center", fontsize=18)
-  ax[2].tick_params(axis='x', labelsize=15)
-  ax[2].tick_params(axis='y', labelsize=12)
-
-  import matplotlib.ticker as mtick
-
-  formatter = mtick.StrMethodFormatter('${x:,.0f}')
-  ax[2].xaxis.set_major_formatter(formatter)
-
-  plt.suptitle("Best Customer Based on RFM Parameters", fontsize=20)
-
-  plt.tight_layout()
-  plt.subplots_adjust(top=0.85)
-
-  st.pyplot(fig)
-
-  with st.expander("Kapan terakhir seorang pelanggan melakukan transaksi?"):
-      st.write(
-          "Pelanggan 856336203359aa6a61bf3826f7d84c49 dan a4b417188addbc05b26b72d5e44837a1 merupakan pelanggan yang paling terakhir melakukan transaksi.")
-
-  with st.expander("Seberapa sering seorang pelanggan melakukan transaksi?"):
-      st.write(
-          "Setelah dianalisis dan divisualisasikan, ternyata setiap pelanggan hanya melakukan pembelian sekali.")
-
-  with st.expander("Kapan terakhir seorang pelanggan melakukan transaksi?"):
-      st.write(
-          "Pelanggan 1617b1357756262bfa56ab541c47bc16 merupakan pelanggan dengan total pengeluaran tertinggi, yaitu sejumlah 109.312 ribu.")
-
+with st.expander("Bagaimana distribusi skor ulasan pelanggan?"):
+    st.markdown('<p class="expander-text">Distribusi skor ulasan pelanggan menunjukkan bahwa mayoritas pelanggan memberikan skor 5 dengan jumlah lebih dari 66.000 pelanggan, yang menunjukkan kepuasan pelanggan yang tinggi terhadap layanan E-commerce.</p>', unsafe_allow_html=True)
 
 st.caption('Copyright © Lukas Krisna 2025')

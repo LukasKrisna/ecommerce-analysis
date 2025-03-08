@@ -3,3 +3,4 @@ matplotlib==3.9.4
 seaborn==0.13.2
 streamlit==1.43.0
 Babel==2.17.0
+plotly==6.0.0
